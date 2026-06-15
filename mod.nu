@@ -11,10 +11,6 @@
 #     build:      list<string>   # dot-separated identifiers; [] when none
 #   }
 #
-# `decode` is the inverse of `encode`. Comparison and sort follow spec
-# rule 11 (major.minor.patch first, then dot-wise prerelease comparison
-# with numeric < alphanumeric, build metadata ignored).
-#
 # Public commands:
 #   semver decode       — string → record (errors on invalid input)
 #   semver is-valid     — string → bool
@@ -31,6 +27,7 @@ const SEMVER_REGEX = '^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0
 
 # ---------- comparison primitives (private) ----------
 
+# C-style comparison of integers
 def cmp-int [a: int, b: int]: nothing -> int {
   if $a < $b { -1 } else if $a > $b { 1 } else { 0 }
 }
@@ -78,7 +75,7 @@ def cmp-pre-list [a: list<string>, b: list<string>]: nothing -> int {
 
 # Decode one semver string into a record. Errors on invalid input.
 # `decode` dispatches to this for each item when given a list.
-def parse-one []: string -> record {
+def decode-one []: string -> record {
   let v = $in
   let m = $v | parse --regex $SEMVER_REGEX
   if ($m | is-empty) {
@@ -97,7 +94,7 @@ def parse-one []: string -> record {
 }
 
 # Render one semver record back to its canonical string form.
-def format-one []: record -> string {
+def encode-one []: record -> string {
   let v = $in
   let pre = if ($v.prerelease | is-empty) { '' } else { '-' + ($v.prerelease | str join '.') }
   let bld = if ($v.build | is-empty) { '' } else { '+' + ($v.build | str join '.') }
@@ -118,9 +115,9 @@ def format-one []: record -> string {
 export def decode []: [string -> record, list<string> -> list<record>] {
   let v = $in
   if (($v | describe) == 'string') {
-    $v | parse-one
+    $v | decode-one
   } else {
-    $v | each { $in | parse-one }
+    $v | each { $in | decode-one }
   }
 }
 
@@ -144,9 +141,9 @@ export def is-valid []: string -> bool {
 export def encode []: [record -> string, list<record> -> list<string>] {
   let v = $in
   if (($v | describe) | str starts-with 'record') {
-    $v | format-one
+    $v | encode-one
   } else {
-    $v | each { $in | format-one }
+    $v | each { $in | encode-one }
   }
 }
 
