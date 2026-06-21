@@ -4,13 +4,14 @@
 # decoded into a record:
 #
 #   {
-#     major:        int
-#     minor:        int
-#     patch:        int
-#     prerelease:   list<string>   # dot-separated identifiers; [] when none
-#     build:        list<string>   # dot-separated identifiers; [] when none
-#     conventional: bool           # true when input conforms to the SemVer 2.0.0 BNF
+#     major:      int
+#     minor:      int
+#     patch:      int
+#     prerelease: list<string>   # dot-separated identifiers; [] when none
+#     build:      list<string>   # dot-separated identifiers; [] when none
 #   }
+#
+# Decoding a string that does not conform to the spec raises an error.
 #
 
 # Official spec regex (named-captures form) from semver.org. 
@@ -59,13 +60,13 @@ def cmp-pre-list [a: list<string>, b: list<string>]: nothing -> int {
 
 # ---------- single-item helpers (private) ----------
 
-# Decode one semver string into a record. On spec-conforming input the
-# record has `conventional: true`; false otherwise.
+# Decode one semver string into a record. Raises an error when the input
+# does not conform to the SemVer 2.0.0 spec.
 def decode-one []: string -> record {
   let v = $in
   let m = $v | parse --regex $SEMVER_REGEX
   if ($m | is-empty) {
-    return { major: 0, minor: 0, patch: 0, prerelease: [], build: [], conventional: false }
+    error make { msg: $"not a valid semver string: '($v)'" }
   }
   let r = $m | first
   let pre = $r.prerelease? | default ''
@@ -76,7 +77,6 @@ def decode-one []: string -> record {
     patch: ($r.patch | into int)
     prerelease: (if ($pre | is-empty) { [] } else { $pre | split row '.' })
     build: (if ($bld | is-empty) { [] } else { $bld | split row '.' })
-    conventional: true
   }
 }
 
@@ -90,12 +90,12 @@ def encode-one []: record -> string {
 
 # ---------- public ----------
 
-# Decode a semver string into a record, or a list of strings into a list of records.
+# Decode a semver string into a record, or a list of strings into a list of
+# records. Raises an error on input that does not conform to the spec.
 @search-terms semver decode parse version
-@example "core only" { '1.2.3' | semver decode } --result { major: 1, minor: 2, patch: 3, prerelease: [], build: [], conventional: true }
-@example "prerelease and build" { '1.2.3-rc.1+exp.5114' | semver decode } --result { major: 1, minor: 2, patch: 3, prerelease: [rc 1], build: [exp 5114], conventional: true }
+@example "core only" { '1.2.3' | semver decode } --result { major: 1, minor: 2, patch: 3, prerelease: [], build: [] }
+@example "prerelease and build" { '1.2.3-rc.1+exp.5114' | semver decode } --result { major: 1, minor: 2, patch: 3, prerelease: [rc 1], build: [exp 5114] }
 @example "list broadcasting" { ['1.2.3' '2.0.0-rc.1'] | semver decode | length } --result 2
-@example "non-conventional input" { 'v1.2.3' | semver decode } --result { major: 0, minor: 0, patch: 0, prerelease: [], build: [], conventional: false }
 export def decode []: [string -> record, list<string> -> list<record>] {
   let v = $in
   if (($v | describe) == 'string') {
@@ -162,7 +162,7 @@ export def sort [--reverse]: list<record> -> list<record> {
 @example "bump major" { '1.2.3-rc.1+build' | semver decode | semver bump major | semver encode } --result '2.0.0'
 export def "bump major" []: record -> record {
   let v = $in
-  { major: ($v.major + 1), minor: 0, patch: 0, prerelease: [], build: [], conventional: true }
+  { major: ($v.major + 1), minor: 0, patch: 0, prerelease: [], build: [] }
 }
 
 # Increment the minor number; reset patch to 0 and clear any
@@ -171,7 +171,7 @@ export def "bump major" []: record -> record {
 @example "bump minor" { '1.2.3-rc.1' | semver decode | semver bump minor | semver encode } --result '1.3.0'
 export def "bump minor" []: record -> record {
   let v = $in
-  { major: $v.major, minor: ($v.minor + 1), patch: 0, prerelease: [], build: [], conventional: true }
+  { major: $v.major, minor: ($v.minor + 1), patch: 0, prerelease: [], build: [] }
 }
 
 # Increment the patch number; clear any pre-release and build metadata.
@@ -179,5 +179,5 @@ export def "bump minor" []: record -> record {
 @example "bump patch" { '1.2.3' | semver decode | semver bump patch | semver encode } --result '1.2.4'
 export def "bump patch" []: record -> record {
   let v = $in
-  { major: $v.major, minor: $v.minor, patch: ($v.patch + 1), prerelease: [], build: [], conventional: true }
+  { major: $v.major, minor: $v.minor, patch: ($v.patch + 1), prerelease: [], build: [] }
 }
