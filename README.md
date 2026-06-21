@@ -170,7 +170,7 @@ To include pre-releases (e.g. to resolve the latest release-candidate), drop the
 
 ### Derive the next version from conventional commits
 
-Pair `semver` with [`ccommit`](https://github.com/lassoColombo/conventional-commit) to compute the next tag from the commits since the last release: a breaking change bumps major, a `feat` bumps minor, a `fix`/`perf`/`refactor` bumps patch.
+Pair `semver` with [`ccommit`](https://github.com/lassoColombo/conventional-commit) to compute the next tag from the commits since the last release: in this example a breaking change bumps major, a `feat` bumps minor, a `fix`/`perf`/`refactor` bumps patch.
 
 ```nu
 use semver
@@ -199,7 +199,7 @@ def next-version [last?: string]: nothing -> any {
 
 ### Maintain a per-major support matrix
 
-Collapse a tag list to the highest release on each major line - the set of versions a project still supports / publishes docs for.
+Collapse a tag list to the highest release on each major line
 
 ```nu
 def support-matrix []: nothing -> table {
