@@ -12,11 +12,9 @@
       1. [Non-conforming input](#non-conforming-input)
    7. [CI/CD recipes](#ci/cd-recipes)
       1. [Resolve the latest released version from git tags](#resolve-the-latest-released-version-from-git-tags)
-      2. [Gate a production deploy to stable releases only](#gate-a-production-deploy-to-stable-releases-only)
-      3. [Block a release that does not supersede the published one](#block-a-release-that-does-not-supersede-the-published-one)
-      4. [Reject a malformed version before tagging](#reject-a-malformed-version-before-tagging)
-      5. [Derive the next version from conventional commits](#derive-the-next-version-from-conventional-commits)
-      6. [Maintain a per-major support matrix](#maintain-a-per-major-support-matrix)
+      2. [Build a pre-release tag for a non-master branch](#build-a-pre-release-tag-for-a-non-master-branch)
+      3. [Derive the next version from conventional commits](#derive-the-next-version-from-conventional-commits)
+      4. [Maintain a per-major support matrix](#maintain-a-per-major-support-matrix)
 
 ## Why?
 
@@ -153,6 +151,31 @@ def latest-release []: nothing -> string {
 ```
 
 To include pre-releases (e.g. to resolve the latest release-candidate), drop the `where` command.
+
+### Build a pre-release tag for a non-master branch
+
+CI builds off a feature branch should not claim a clean release number. Take the latest release, bump the patch to point at the line the branch targets, then stamp the branch name into the pre-release identifiers and the short commit SHA into the build metadata.
+
+```nu
+def branch-tag [base: string, branch: string, sha: string]: nothing -> string {
+    $base
+    | semver decode
+    | semver bump patch                          # the release line this branch is heading toward
+    | merge { 
+        prerelease: [($branch | str downcase | str replace --all --regex '[^0-9a-z-]+' '-')]
+        build: [$sha] 
+    }
+    | semver encode
+}
+
+# on branch `feature/login-form`, with `1.4.2` the latest release:
+branch-tag '1.4.2'
+# => '1.4.3-feature-login-form+abc1234'
+
+# the pre-release ranks below the eventual stable release, as intended
+('1.4.3-feature-login-form+abc1234' | semver decode) | semver compare ('1.4.3' | semver decode)
+# => -1
+```
 
 ### Derive the next version from conventional commits
 
