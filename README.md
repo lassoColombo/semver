@@ -11,9 +11,8 @@ parse, validate, compare, sort, and bump versions as structured data.
   - [Installation](#installation)
   - [Quick start](#quick-start)
   - [Spec conformance - what is conventional anyway?](#spec-conformance---what-is-conventional-anyway?)
-      - [Strict in both directions](#strict-in-both-directions)
-      - [No `bump prerelease`](#no-`bump-prerelease`)
       - [Untrusted input](#untrusted-input)
+      - [Bumping tags](#bumping-tags)
   - [Commands](#commands)
     - [`semver bump major`](#`semver-bump-major`)
     - [`semver bump minor`](#`semver-bump-minor`)
@@ -32,8 +31,7 @@ parse, validate, compare, sort, and bump versions as structured data.
       - [Bump the counter (npm `prerelease`)](#bump-the-counter-(npm-`prerelease`))
       - [Promote to the next stage](#promote-to-the-next-stage)
       - [Finalize a release](#finalize-a-release)
-
-
+  - [Mentions](#mentions)
 
 ## Why?
 
@@ -106,22 +104,11 @@ $prerelease | semver compare $release
 
 ## Spec conformance - what is conventional anyway?
 
-This module adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
-
-#### Strict in both directions
-
-This module will strictly enforce spec complianceL
+This module adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html) and will strictly enforce spec compliance:
 - `decode` will not accept a string the spec rejects
 - `encode` will not emit one 
 
 The two are exact inverses: `$version | semver decode | semver encode` gives back the original string.
-
-#### Bumping tags
-
-This module provides utility functions to bump a tag by major, minor and patch, but not by prerelease.  
-That's because prerelease has no conventional sape and no bump strategy: the spec fixes pre-release *format* and *ordering* but defines no progression.
-
-If you do want a convention, [Pre-release strategies](#pre-release-strategies) collects the common ones (npm-style counter, stage promotion, finalize) as ready-to-copy recipes.
 
 #### Untrusted input
 
@@ -134,6 +121,13 @@ A single non-conforming item aborts the whole pipeline, so either filter with `s
 | semver encode
 # => ['1.4.0' '2.0.0-rc.1']
 ```
+
+#### Bumping tags
+
+This module provides utility functions to bump a tag by major, minor and patch, but not by prerelease.  
+That's because prerelease has no conventional sape and no bump strategy: the spec fixes pre-release *format* and *ordering* but defines no progression.
+
+If you do want a convention, [Pre-release strategies](#pre-release-strategies) collects the common ones (npm-style counter, stage promotion, finalize) as ready-to-copy recipes.
 
 ## Commands
 
@@ -336,7 +330,7 @@ To include pre-releases (e.g. to resolve the latest release-candidate), drop the
 
 ### Build a pre-release tag for a non-master branch
 
-CI builds off a feature branch should not claim a clean release number. Take the latest release, bump the patch to point at the line the branch targets, then stamp the branch name into the pre-release identifiers and the short commit SHA into the build metadata.
+Take the latest release, bump the patch to point at the line the branch targets, then stamp the branch name into the pre-release identifiers and the short commit SHA into the build metadata.
 
 ```nu
 def branch-tag [base: string, branch: string, sha: string]: nothing -> string {
@@ -349,14 +343,6 @@ def branch-tag [base: string, branch: string, sha: string]: nothing -> string {
     }
     | semver encode
 }
-
-# on branch `feature/login-form`, with `1.4.2` the latest release:
-branch-tag '1.4.2'
-# => '1.4.3-feature-login-form+abc1234'
-
-# the pre-release ranks below the eventual stable release, as intended
-('1.4.3-feature-login-form+abc1234' | semver decode) | semver compare ('1.4.3' | semver decode)
-# => -1
 ```
 
 ### Derive the next version from conventional commits
@@ -420,7 +406,7 @@ def support-matrix []: nothing -> table {
 
 #### Bump the counter (npm `prerelease`)
 
-A faithful port of `npm version prerelease [--preid <id>]`.  Increment the right-most numeric identifier; on a clean release, bump the patch and open a new series; with `--preid`, keep counting under that identifier or switch to a fresh `<id>.0`.
+A faithful port of `npm version prerelease [--preid <id>]`. Increment the right-most numeric identifier; on a clean release, bump the patch and open a new series; with `--preid`, keep counting under that identifier or switch to a fresh `<id>.0`.
 
 ```nu
 use semver
@@ -480,10 +466,12 @@ def promote-stage [--ladder: list<string> = [alpha beta rc]]: string -> string {
 
 #### Finalize a release
 
-Drop the pre-release (and build metadata) to ship the stable version — the counterpart to opening one. Like npm's `release`, but idempotent: finalizing an already-stable version returns it unchanged instead of erroring.
-
 ```nu
 def finalize []: string -> string {
     $in | semver decode | merge { prerelease: [], build: [] } | semver encode
 }
 ```
+
+## Mentions
+
+Tests are powered by [nutest](https://github.com/vyadh/nutest) an amazing testing framework for nushell

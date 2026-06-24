@@ -2,14 +2,11 @@
 #
 # Implements https://semver.org/spec/v2.0.0.html. A semver string is
 # decoded into a record:
-#
-#   {
-#     major:      int
-#     minor:      int
-#     patch:      int
-#     prerelease: list<string>   # dot-separated identifiers; [] when none
-#     build:      list<string>   # dot-separated identifiers; [] when none
-#   }
+# - `major`: `int`
+# - `minor`: `int`
+# - `patch`: `int`
+# - `prerelease`: `list<string>` — dot-separated identifiers; `[]` when none
+# - `build`: `list<string>` — dot-separated identifiers; `[]` when none
 #
 # Decoding a string that does not conform to the spec raises an error. The
 # record-consuming commands (encode, compare, bump) likewise raise a
